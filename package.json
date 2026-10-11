@@ -1,0 +1,14 @@
+{
+  "name": "@christomitov/pi-image-guard",
+  "version": "1.0.0",
+  "description": "Automatically keep the newest images in Pi requests without changing saved history.",
+  "type": "module",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/christomitov/pi-image-guard.git" },
+  "keywords": ["pi-package", "images", "vllm", "context"],
+  "engines": { "node": ">=22.6.0" },
+  "scripts": { "test": "node --experimental-strip-types --test test/*.test.ts" },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
+  "peerDependenciesMeta": { "@earendil-works/pi-coding-agent": { "optional": true } },
+  "pi": { "extensions": ["./src/index.ts"] }
+}
