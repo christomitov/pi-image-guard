@@ -1,13 +1,24 @@
 import { readFileSync } from "node:fs";
-import { DEFAULT_KEEP, MAX_KEEP, isRecord, validKeep } from "./prune.ts";
+import {
+  DEFAULT_BATCH,
+  DEFAULT_KEEP,
+  MAX_BATCH,
+  MAX_KEEP,
+  isRecord,
+  validBatch,
+  validKeep,
+} from "./prune.ts";
 
 export interface GuardConfig {
   keep: number;
+  /** Evict in batches of this many images when over budget (1 = per-image). */
+  batch: number;
   /** Empty means every model. Otherwise exact provider/model-id matches. */
   models: string[];
 }
 export interface FlagValues {
   keep?: unknown;
+  batch?: unknown;
   models?: unknown;
 }
 
@@ -30,7 +41,7 @@ export function loadConfig(path: string, flags: FlagValues = {}) {
     }
   }
   for (const key of Object.keys(raw)) {
-    if (key !== "keep" && key !== "models") warnings.push(`Unknown image-guard setting: ${key}.`);
+    if (key !== "keep" && key !== "batch" && key !== "models") warnings.push(`Unknown image-guard setting: ${key}.`);
   }
 
   let keep: unknown = raw.keep ?? DEFAULT_KEEP;
@@ -43,6 +54,17 @@ export function loadConfig(path: string, flags: FlagValues = {}) {
     keep = DEFAULT_KEEP;
   }
 
+  let batch: unknown = raw.batch ?? DEFAULT_BATCH;
+  if (flags.batch !== undefined) {
+    batch =
+      typeof flags.batch === "string" && /^\d+$/.test(flags.batch)
+        ? Number(flags.batch) : flags.batch;
+  }
+  if (!validBatch(batch)) {
+    warnings.push(`image-guard batch must be an integer from 1 to ${MAX_BATCH}; using ${DEFAULT_BATCH}.`);
+    batch = DEFAULT_BATCH;
+  }
+
   let models: unknown = raw.models ?? [];
   if (flags.models !== undefined) {
     models = typeof flags.models === "string"
@@ -53,8 +75,8 @@ export function loadConfig(path: string, flags: FlagValues = {}) {
     warnings.push("image-guard models must be exact provider/model-id strings; protecting all models instead.");
     models = [];
   }
-  // Both fields are runtime-validated above.
-  return { config: { keep, models } as GuardConfig, warnings };
+  // All fields are runtime-validated above.
+  return { config: { keep, batch, models } as GuardConfig, warnings };
 }
 
 export function matchesModel(config: GuardConfig, model?: { provider: string; id: string }): boolean {
